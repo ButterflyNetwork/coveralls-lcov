@@ -7,6 +7,50 @@ module Coveralls
         @source_encoding = source_encoding
       end
 
+      def service_build_url
+        if ENV["BUILDKITE_JOB_ID"]
+          return "https://buildkite.com/" + ENV['BUILDKITE_PROJECT_SLUG'] + "/builds/" + ENV['BUILDKITE_BUILD_NUMBER'] + "#"
+        end
+      end
+
+      def service_git_branch
+        if ENV["BUILDKITE_BRANCH"]
+          return ENV["BUILDKITE_BRANCH"]
+        end
+        if ENV["TRAVIS_PULL_REQUEST"] == "false"
+          return ENV["TRAVIS_BRANCH"]
+        else
+          return ENV["TRAVIS_PULL_REQUEST_BRANCH"]
+        end
+      end
+
+      def service_job_id
+        if ENV["BUILDKITE_JOB_ID"]
+          return ENV["BUILDKITE_JOB_ID"]
+        end
+        if ENV["TRAVIS_JOB_ID"]
+          return ENV["TRAVIS_JOB_ID"]
+        end
+      end
+
+      def service_name
+        if ENV["BUILDKITE_JOB_ID"]
+          return "buildkite"
+        end
+        if ENV["TRAVIS_JOB_ID"]
+          return "travis-ci"
+        end
+      end
+
+      def service_pull_request
+         if ENV["BUILDKITE_PULL_REQUEST"]
+           return ENV["BUILDKITE_PULL_REQUEST"]
+         end
+         if ENV["TRAVIS_PULL_REQUEST"]
+           return ENV["TRAVIS_PULL_REQUEST"]
+         end
+      end
+
       def convert
         source_files = []
         lcov_info = parse_tracefile
@@ -14,10 +58,12 @@ module Coveralls
           source_files << generate_source_file(filename, info)
         end
         payload = {
-          service_name: "travis-ci",
-          service_job_id: ENV["TRAVIS_JOB_ID"],
+          service_name: service_name,
+          service_job_id: service_job_id,
           git: git_info,
           source_files: source_files,
+          service_build_url: service_build_url,
+          service_pull_request: service_pull_request,
         }
         payload
       end
@@ -70,7 +116,7 @@ module Coveralls
             message: `git log -1 --format=%s`,
           },
           remotes: [], # FIXME need this?
-          branch: `git rev-parse --abbrev-ref HEAD`,
+          branch: service_git_branch,
         }
       end
     end
